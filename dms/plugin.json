@@ -1,0 +1,23 @@
+{
+  "id": "freshrssReader",
+  "name": "FreshRSS",
+  "description": "FreshRSS client for DankBar: unread count on the bar, categories, article list with thumbnails, and read/star state that syncs with your server. Keyboard-driven, with FreshRSS's own shortcuts.",
+  "version": "0.1.0",
+  "author": "Jason Carrasco",
+  "icon": "rss_feed",
+  "type": "widget",
+  "capabilities": [
+    "dankbar-widget"
+  ],
+  "component": "./FreshRSSWidget.qml",
+  "requires_dms": ">=1.6.0",
+  "dependencies": [
+    "python3",
+    "secret-tool",
+    "gnome-keyring"
+  ],
+  "permissions": [
+    "process",
+    "network"
+  ]
+}

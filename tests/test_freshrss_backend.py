@@ -145,3 +145,10 @@ def test_favicon_url_rebuilt_on_connected_server():
     assert fb.favicon_url("https://cdn.example/icon.png", base) == "https://cdn.example/icon.png"
     assert fb.favicon_url("", base) == ""
 
+
+def test_dms_copies_match_shared_files():
+    # dms/ ships its own copies so it can be installed on its own; run
+    # tools/sync-dms.sh after changing any of these.
+    root = Path(__file__).resolve().parents[1]
+    for rel in ["Model.js", "scripts/freshrss_backend.py"]:
+        assert (root / rel).read_bytes() == (root / "dms" / rel).read_bytes(), f"dms/{rel} is out of date"
