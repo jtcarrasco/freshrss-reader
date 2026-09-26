@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "freshrss-reader",
+  "name": "FreshRSS for Omarchy",
+  "version": "0.1.0",
+  "author": "Jason Carrasco",
+  "license": "MIT",
+  "description": "FreshRSS client for the Omarchy bar: unread count, categories and articles in a themed dropdown, read/star state synced with your FreshRSS server.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "FreshRSS",
+    "description": "Unread count and a dropdown to read and triage your FreshRSS feeds.",
+    "category": "Productivity",
+    "aliases": ["freshrss", "rss", "feeds", "news"],
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
