@@ -57,8 +57,8 @@ BarWidget {
     function toggle(): void { root.togglePanel() }
     function refresh(): void { if (panelLoader.item) panelLoader.item.refresh() }
     function popOut(): void { if (panelLoader.item) panelLoader.item.setExpanded(true) }
-    // Jump straight to the unread list (handy as a keybind target).
     function openSettings(): void { if (panelLoader.item) { root.open(); panelLoader.item.settingsView = true } }
+    // Jump straight to the unread list (handy as a keybind target).
     function openUnread(): void { if (panelLoader.item) { root.open(); panelLoader.item.openStream(panelLoader.item.readingList, "All unread") } }
   }
 

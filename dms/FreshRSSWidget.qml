@@ -55,6 +55,9 @@ PluginComponent {
   // The popout clears its password field when this fires.
   signal loginSucceeded()
 
+  // The reading list is "All unread" or "All items" depending on the filter.
+  readonly property string streamTitle: !stream ? ""
+    : (stream.id === readingList && !unreadOnly) ? "All items" : stream.title
   readonly property string readingList: "user/-/state/com.google/reading-list"
   readonly property string starredStream: "user/-/state/com.google/starred"
 
@@ -236,6 +239,7 @@ PluginComponent {
     { key: "r", action: "Toggle read" },
     { key: "f", action: "Toggle star" },
     { key: "m", action: "Load more" },
+    { key: "u", action: "Unread only / all" },
     { key: "q / R", action: "Refresh" },
     { key: ",", action: "Settings" },
     { key: "Esc", action: "Back, then close" },
@@ -432,6 +436,13 @@ PluginComponent {
         // use bubble up here too.
         focus: true
         Timer { interval: 50; running: true; onTriggered: bodyHost.forceActiveFocus() }
+        // DMS's container can take focus back after the timer above (it grabs
+        // focus again once the popout becomes visible), and Tab can move focus
+        // onto a button. Whenever focus lands anywhere but here or a text
+        // field, take it back so keys keep working.
+        readonly property Item focusNow: Window.activeFocusItem
+        onFocusNowChanged: if (focusNow !== bodyHost && !anyFieldFocused()) refocus.restart()
+        Timer { id: refocus; interval: 30; onTriggered: if (!bodyHost.anyFieldFocused()) bodyHost.forceActiveFocus() }
         Component.onCompleted: if (root.configured) root.refresh()
 
         function anyFieldFocused() {
@@ -456,6 +467,7 @@ PluginComponent {
           else if (k === Qt.Key_Home) { if (root.jumpTo(true)) scrollToCursor() }
           else if (k === Qt.Key_End) { if (root.jumpTo(false)) scrollToCursor() }
           else if (k === Qt.Key_Return || k === Qt.Key_Enter) root.activateSelected()
+          else if (k === Qt.Key_Tab || k === Qt.Key_Backtab) {}   // swallow: don't move focus onto buttons
           else if (k === Qt.Key_Space) { if (root.view !== "home" && !root.settingsView) root.openInBrowser(root.cursor) }
           else if (t === "h") { if (root.nextUnread()) scrollToCursor() }
           else if (t === "n") root.stepCategory(1)
@@ -463,6 +475,7 @@ PluginComponent {
           else if (t === "r") root.toggleRead(root.cursor)
           else if (t === "f") root.toggleStar(root.cursor)
           else if (t === "m") { if (root.continuation) root.loadItems(true) }
+          else if (t === "u") { if (root.view === "items") { root.unreadOnly = !root.unreadOnly; root.loadItems(false) } }
           else if (t === "q" || t === "R") root.refreshCurrent()
           else if (t === ",") { if (root.configured) root.settingsView = !root.settingsView }
           else if (t === "a") searchHint.visible = true
@@ -495,7 +508,7 @@ PluginComponent {
                 width: parent.width
                 text: root.settingsView ? (root.configured ? "Settings" : "Connect to FreshRSS")
                   : root.view === "home" ? "FreshRSS"
-                  : root.view === "items" ? (root.stream ? root.stream.title : "")
+                  : root.view === "items" ? root.streamTitle
                   : (root.article ? root.article.feedTitle : "")
                 font.pixelSize: Theme.fontSizeLarge
                 font.weight: Font.Bold
@@ -715,7 +728,7 @@ PluginComponent {
             Item { Layout.fillWidth: true }
             DankButton {
               visible: root.stream !== null && root.stream.id !== root.starredStream
-              text: root.confirmMarkAll ? "Click again to mark all read" : "Mark all read"
+              text: root.confirmMarkAll ? "Confirm" : "Mark all read"
               iconName: "done_all"
               buttonHeight: 32
               backgroundColor: root.confirmMarkAll ? Theme.error : Theme.surfaceContainerHigh
@@ -777,6 +790,8 @@ PluginComponent {
               asynchronous: true
               cache: true
               fillMode: Image.PreserveAspectCrop
+              // Crop from the top, where news photos usually put faces.
+              verticalAlignment: Image.AlignTop
               sourceSize.width: 1200
             }
             StyledText {

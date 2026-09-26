@@ -80,6 +80,7 @@ Panel {
     { key: "r", action: "Toggle read" },
     { key: "f", action: "Toggle star" },
     { key: "m", action: "Load more" },
+    { key: "u", action: "Unread only / all" },
     { key: "q / R", action: "Refresh" },
     { key: "z", action: "Window / dropdown" },
     { key: ",", action: "Settings" },
@@ -87,6 +88,9 @@ Panel {
     { key: "Right-click", action: "Toggle read on a row" }
   ]
 
+  // The reading list is "All unread" or "All items" depending on the filter.
+  readonly property string streamTitle: !stream ? ""
+    : (stream.id === readingList && !unreadOnly) ? "All items" : stream.title
   readonly property string readingList: "user/-/state/com.google/reading-list"
   readonly property string starredStream: "user/-/state/com.google/starred"
 
@@ -272,6 +276,8 @@ Panel {
     if (t === "r") { root.toggleRead(root.cursor); return }
     if (t === "f") { root.toggleStar(root.cursor); return }
     if (t === "m") { if (root.continuation) root.loadItems(true); return }
+    // u: FreshRSS's filter key; flips the list between unread only and all.
+    if (t === "u") { if (root.view === "items") { root.unreadOnly = !root.unreadOnly; root.loadItems(false) } return }
     if (t === " ") { root.openInBrowser(root.cursor); return }
   }
 
@@ -474,7 +480,7 @@ Panel {
             width: parent.width
             text: root.settingsView ? (root.configured ? "Settings" : "Connect to FreshRSS")
               : root.view === "home" ? "FreshRSS"
-              : root.view === "items" ? (root.stream ? root.stream.title : "")
+              : root.view === "items" ? root.streamTitle
               : (root.article ? root.article.feedTitle : "")
             color: root.fg
             font.family: root.fontFamily
@@ -682,7 +688,7 @@ Panel {
         Layout.fillWidth: true
         spacing: Style.spacing.lg
         ButtonGroup {
-          options: [{ value: "unread", label: "Unread" }, { value: "all", label: "All" }]
+          options: [{ value: "unread", label: "Unread", tooltip: "Unread only (u)" }, { value: "all", label: "All", tooltip: "All items (u)" }]
           value: root.unreadOnly ? "unread" : "all"
           foreground: root.fg
           fontFamily: root.fontFamily
@@ -692,7 +698,7 @@ Panel {
         Item { Layout.fillWidth: true }
         Button {
           visible: root.stream !== null && root.stream.id !== root.starredStream
-          text: root.confirmMarkAll ? "Click again to mark all read" : "Mark all read"
+          text: root.confirmMarkAll ? "Confirm" : "Mark all read"
           bordered: true
           foreground: root.confirmMarkAll ? Color.urgent : root.fg
           fontFamily: root.fontFamily
@@ -750,13 +756,18 @@ Panel {
         Image {
           id: heroImage
           Layout.fillWidth: true
+          // The pop-out window is wide, so a height cap would crop most of the
+          // image away: show all of it there. In the dropdown, crop from the
+          // top, where news photos usually put faces.
           Layout.preferredHeight: status === Image.Ready
-            ? Math.min(Style.space(260), width * implicitHeight / Math.max(1, implicitWidth)) : 0
+            ? Math.min(root.expanded ? Style.space(480) : Style.space(260),
+                       width * implicitHeight / Math.max(1, implicitWidth)) : 0
           visible: status === Image.Ready
           source: root.article ? (root.article.thumbnail || "") : ""
           asynchronous: true
           cache: true
-          fillMode: Image.PreserveAspectCrop
+          fillMode: root.expanded ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+          verticalAlignment: Image.AlignTop
           sourceSize.width: Style.space(1200)
         }
         Text {
