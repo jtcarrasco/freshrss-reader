@@ -19,6 +19,32 @@ Pop out into its own window (`z`):
 
 ![Pop-out window](screenshots/window.png)
 
+## What is FreshRSS?
+
+[FreshRSS](https://freshrss.org/) is a free, open-source RSS and Atom feed
+reader that you host yourself. It runs on your own server (a VPS, a home
+server, a NAS, or a Raspberry Pi), checks your feeds for new articles, and
+keeps one shared list of what you've read and starred. The web interface, phone
+apps and this plugin all read from it, so marking an article read in one place
+marks it read everywhere. You can try it on the [public demo](https://demo.freshrss.org/)
+before installing anything.
+
+This plugin is a client: it needs a FreshRSS server to connect to. If you don't
+have one yet:
+
+- **With Docker (the easiest way):** the official
+  [`freshrss/freshrss` image](https://hub.docker.com/r/freshrss/freshrss) and its
+  [Docker guide](https://github.com/FreshRSS/FreshRSS/tree/edge/Docker) get a
+  server running in a few minutes.
+- **Without Docker:** see the
+  [prerequisites](https://freshrss.github.io/FreshRSS/en/admins/02_Prerequisites.html)
+  and the [installation guide](https://freshrss.github.io/FreshRSS/en/admins/03_Installation.html)
+  (a web server with PHP).
+- **Then turn on app access:** in FreshRSS, enable the API and set an API
+  password, as described in
+  [Mobile access](https://freshrss.github.io/FreshRSS/en/users/06_Mobile_access.html).
+  This plugin connects the same way the phone apps do.
+
 ## Features
 
 - Unread count on the bar icon, updated in the background every 5 minutes
@@ -34,7 +60,8 @@ Pop out into its own window (`z`):
 
 ## Requirements
 
-- A FreshRSS server (tested with 1.30) with **API access enabled**
+- A FreshRSS server (tested with 1.30; see [What is FreshRSS?](#what-is-freshrss)
+  if you need one) with **API access enabled**
   (Settings → Authentication → Allow API access) and an **API password** set
   for your user (Settings → Profile → API management). The plugin uses the API
   password, not your web login password.
