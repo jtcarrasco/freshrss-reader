@@ -14,7 +14,7 @@ import sys
 import time
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 CONFIG_DIR = os.path.expanduser("~/.config/freshrss-plugin")
@@ -78,6 +78,55 @@ class _TextExtractor(HTMLParser):
     def handle_data(self, data):
         if not self._skip:
             self.parts.append(data)
+
+
+class _FirstImage(HTMLParser):
+    """First real <img> in an article: skips tracking pixels (1x1) and
+    data: URIs."""
+
+    def __init__(self):
+        super().__init__()
+        self.src = ""
+
+    def handle_starttag(self, tag, attrs):
+        if self.src or tag != "img":
+            return
+        a = dict(attrs)
+        if a.get("width") in ("0", "1") or a.get("height") in ("0", "1"):
+            return
+        src = (a.get("src") or "").strip()
+        if src and not src.startswith("data:"):
+            self.src = src
+
+
+# Qt on Omarchy decodes jpg/png/gif/webp/svg; AVIF and HEIC need extra plugins.
+_UNSUPPORTED_IMAGE = (".avif", ".heic", ".heif")
+
+
+def _usable_image(url: str, base: str) -> str:
+    url = urljoin(base, url.strip()) if url else ""
+    if not url.startswith(("http://", "https://")):
+        return ""
+    if urlparse(url).path.lower().endswith(_UNSUPPORTED_IMAGE):
+        return ""
+    return url
+
+
+def thumbnail_url(item: dict, html: str, link: str) -> str:
+    """An image enclosure if the feed has one, else the first <img> in the
+    article. Relative URLs resolve against the article link."""
+    for enc in item.get("enclosure") or []:
+        href = enc.get("href") or ""
+        if (enc.get("type") or "").startswith("image") or \
+                urlparse(href).path.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+            url = _usable_image(href, link)
+            if url:
+                return url
+    if html:
+        finder = _FirstImage()
+        finder.feed(html)
+        return _usable_image(finder.src, link)
+    return ""
 
 
 def html_to_text(fragment: str) -> str:
@@ -157,6 +206,18 @@ def write_token(base_url: str, token: str) -> str:
     return _request(api_url(base_url, "/reader/api/0/token"), token=token).decode("utf-8").strip()
 
 
+def favicon_url(icon_url: str, base_url: str) -> str:
+    """FreshRSS serves favicons from its own f.php but builds the URL from its
+    base_url setting, which is often missing the port (or wrong) behind a
+    proxy. Rebuild it on the address the user connected with."""
+    if not icon_url:
+        return ""
+    parts = urlparse(urljoin(base_url + "/", icon_url))
+    if parts.path.endswith("/f.php"):
+        return base_url + "/f.php" + ("?" + parts.query if parts.query else "")
+    return parts.geturl()
+
+
 def overview(base_url: str, token: str) -> dict:
     """Categories and feeds with unread counts, shaped for the panel:
     {"totalUnread": n, "categories": [{"id", "label", "unread",
@@ -175,7 +236,7 @@ def overview(base_url: str, token: str) -> dict:
         entry["feeds"].append({
             "id": sub.get("id"), "title": sub.get("title") or "",
             "unread": unread.get(sub.get("id"), 0),
-            "iconUrl": sub.get("iconUrl") or "", "htmlUrl": sub.get("htmlUrl") or ""})
+            "iconUrl": favicon_url(sub.get("iconUrl") or "", base_url), "htmlUrl": sub.get("htmlUrl") or ""})
     for cat in categories.values():
         if not cat["unread"]:
             cat["unread"] = sum(f["unread"] for f in cat["feeds"])
@@ -205,6 +266,7 @@ def items(base_url: str, token: str, stream_id: str, *, unread_only: bool = True
                 link = it[key][0].get("href") or ""
                 break
         origin = it.get("origin") or {}
+        html = ((it.get("summary") or it.get("content") or {}).get("content")) or ""
         out.append({
             "id": it.get("id"),
             "title": it.get("title") or "(untitled)",
@@ -215,7 +277,8 @@ def items(base_url: str, token: str, stream_id: str, *, unread_only: bool = True
             "feedTitle": origin.get("title") or "",
             "read": READ in cats,
             "starred": STARRED in cats,
-            "summary": html_to_text(((it.get("summary") or it.get("content") or {}).get("content")) or ""),
+            "summary": html_to_text(html),
+            "thumbnail": thumbnail_url(it, html, link),
         })
     return {"items": out, "continuation": data.get("continuation") or ""}
 

@@ -118,3 +118,30 @@ def test_check_is_freshrss_explains_other_servers():
     with patch.object(fb, "urlopen", side_effect=HTTPError("u", 401, "no", {}, None)):
         with pytest.raises(fb.FreshRSSError, match="doesn't look like a FreshRSS server"):
             fb.check_is_freshrss("http://abs")
+
+
+def test_thumbnail_prefers_image_enclosure():
+    item = {"enclosure": [{"href": "https://x/audio.mp3", "type": "audio/mpeg"},
+                          {"href": "https://x/cover.png", "type": "image"}]}
+    assert fb.thumbnail_url(item, '<img src="https://x/inline.jpg">', "https://x/post") == "https://x/cover.png"
+
+
+def test_thumbnail_falls_back_to_first_real_img():
+    html = ('<img src="https://t/pixel.gif" width="1" height="1">'
+            '<img src="data:image/png;base64,AAAA">'
+            '<p><img src="/media/hero.webp" alt=""></p>')
+    assert fb.thumbnail_url({}, html, "https://blog.example/post/1") == "https://blog.example/media/hero.webp"
+
+
+def test_thumbnail_skips_formats_qt_cant_decode():
+    assert fb.thumbnail_url({}, '<img src="https://x/a.avif">', "https://x/") == ""
+    assert fb.thumbnail_url({}, "<p>no images</p>", "https://x/") == ""
+
+
+def test_favicon_url_rebuilt_on_connected_server():
+    base = "https://rss.example:8080"
+    assert fb.favicon_url("https://rss.example/f.php?h=abc", base) == "https://rss.example:8080/f.php?h=abc"
+    assert fb.favicon_url("/f.php?h=abc", base) == "https://rss.example:8080/f.php?h=abc"
+    assert fb.favicon_url("https://cdn.example/icon.png", base) == "https://cdn.example/icon.png"
+    assert fb.favicon_url("", base) == ""
+
