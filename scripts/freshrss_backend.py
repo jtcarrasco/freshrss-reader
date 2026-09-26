@@ -129,9 +129,13 @@ def check_is_freshrss(base_url: str) -> None:
     """GET /api/greader.php answers "OK" when the API is enabled. Catches a
     wrong address before the API password is sent anywhere."""
     try:
-        raw = _request(api_url(base_url, ""), timeout=10)
-    except FreshRSSError as exc:
-        raise FreshRSSError(f"couldn't reach the FreshRSS API at {base_url} ({exc})") from exc
+        with urlopen(Request(api_url(base_url, "")), timeout=10) as response:
+            raw = response.read()
+    except HTTPError as exc:
+        raise FreshRSSError(f"{base_url} doesn't look like a FreshRSS server "
+                            f"(its /api/greader.php answered HTTP {exc.code})") from exc
+    except URLError as exc:
+        raise FreshRSSError(f"could not reach {base_url} ({exc.reason})") from exc
     if raw.strip() != b"OK":
         raise FreshRSSError(f"{base_url} answered, but its FreshRSS API isn't enabled "
                             "(Settings → Authentication → Allow API access)")

@@ -111,3 +111,10 @@ def test_store_token_reports_missing_keyring():
 
 def test_html_to_text_drops_scripts():
     assert fb.html_to_text("<p>One</p><script>alert(1)</script><p>Two</p>") == "One\n\nTwo"
+
+
+def test_check_is_freshrss_explains_other_servers():
+    from urllib.error import HTTPError
+    with patch.object(fb, "urlopen", side_effect=HTTPError("u", 401, "no", {}, None)):
+        with pytest.raises(fb.FreshRSSError, match="doesn't look like a FreshRSS server"):
+            fb.check_is_freshrss("http://abs")
