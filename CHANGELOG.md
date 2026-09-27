@@ -29,3 +29,5 @@ First release.
 - Security: feed and server text is always shown as plain text (no rich-text
   image loads from titles); "open in browser" only opens http(s) links from
   feeds; feed icon URLs and the server address must be http(s).
+- Server responses are read with a size cap (32 MB) and an overall 60-second
+  deadline, so a misbehaving server can't exhaust memory.

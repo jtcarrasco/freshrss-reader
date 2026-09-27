@@ -169,3 +169,41 @@ def test_item_links_and_favicons_are_web_only():
 def test_check_is_freshrss_rejects_non_http_addresses():
     with pytest.raises(fb.FreshRSSError, match="http:// or https://"):
         fb.check_is_freshrss("file:///etc")
+
+
+class _EndlessResponse:
+    """A response that never ends: every read returns a full chunk."""
+    def __init__(self, headers=None):
+        self.headers = headers or {}
+        self.reads = 0
+
+    def read(self, n=-1):
+        self.reads += 1
+        return b"x" * (n if n and n > 0 else 65536)
+
+
+def test_read_limited_stops_an_endless_response():
+    resp = _EndlessResponse()
+    with pytest.raises(fb.FreshRSSError, match="too large"):
+        fb.read_limited(resp, 256 * 1024)
+    assert resp.reads <= 256 * 1024 // 65536 + 1
+
+
+def test_read_limited_rejects_oversized_content_length_before_reading():
+    resp = _EndlessResponse(headers={"Content-Length": str(50 * 1024 * 1024)})
+    with pytest.raises(fb.FreshRSSError, match="too large"):
+        fb.read_limited(resp, 1024 * 1024)
+    assert resp.reads == 0
+
+
+def test_read_limited_enforces_an_overall_deadline():
+    with pytest.raises(fb.FreshRSSError, match="too long"):
+        fb.read_limited(_EndlessResponse(), 10**12, deadline_s=0)
+
+
+def test_request_refuses_an_endless_api_response():
+    resp = MagicMock()
+    resp.__enter__.return_value = _EndlessResponse()
+    with patch.object(fb, "urlopen", return_value=resp), patch.object(fb, "MAX_API_BYTES", 256 * 1024):
+        with pytest.raises(fb.FreshRSSError, match="too large"):
+            fb._request("http://rss/api/greader.php/reader/api/0/token", token="t")

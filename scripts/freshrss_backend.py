@@ -144,6 +144,40 @@ def html_to_text(fragment: str) -> str:
 
 # ---------------------------------------------------------------- HTTP
 
+# Upper bounds for what we'll accept from the server. The socket timeout only
+# limits each read, so a fast or endless response could otherwise exhaust
+# memory; reads also have an overall deadline.
+MAX_API_BYTES = 32 * 1024 * 1024
+MAX_PROBE_BYTES = 64 * 1024
+READ_DEADLINE_S = 60
+_CHUNK = 64 * 1024
+
+
+def read_limited(response, limit: int, deadline_s: float = READ_DEADLINE_S) -> bytes:
+    """Read an HTTP response body in chunks, refusing anything over `limit`
+    bytes (by Content-Length up front, and by what actually arrives) or
+    taking longer than `deadline_s` overall."""
+    declared = (getattr(response, "headers", None) or {}).get("Content-Length")
+    if declared and str(declared).isdigit() and int(declared) > limit:
+        raise FreshRSSError("the server's response was too large")
+    deadline = time.monotonic() + deadline_s
+    chunks, size = [], 0
+    while True:
+        chunk = response.read(_CHUNK)
+        if not chunk:
+            break
+        size += len(chunk)
+        if size > limit:
+            raise FreshRSSError("the server's response was too large")
+        if time.monotonic() > deadline:
+            raise FreshRSSError("the server took too long to respond")
+        chunks.append(chunk)
+        # HTTPResponse.read(n) only returns short at the end of the body.
+        if len(chunk) < _CHUNK:
+            break
+    return b"".join(chunks)
+
+
 def _request(url: str, *, token: str = None, data: dict = None, timeout: int = 15) -> bytes:
     headers = {}
     if token:
@@ -155,7 +189,7 @@ def _request(url: str, *, token: str = None, data: dict = None, timeout: int = 1
     request = Request(url, data=body, headers=headers, method="POST" if body is not None else "GET")
     try:
         with urlopen(request, timeout=timeout) as response:
-            return response.read()
+            return read_limited(response, MAX_API_BYTES)
     except HTTPError as exc:
         if exc.code == 401:
             raise FreshRSSError("not authorized: check the username and API password") from exc
@@ -186,7 +220,7 @@ def check_is_freshrss(base_url: str) -> None:
         raise FreshRSSError("the server address must start with http:// or https://")
     try:
         with urlopen(Request(api_url(base_url, "")), timeout=10) as response:
-            raw = response.read()
+            raw = read_limited(response, MAX_PROBE_BYTES)
     except HTTPError as exc:
         raise FreshRSSError(f"{base_url} doesn't look like a FreshRSS server "
                             f"(its /api/greader.php answered HTTP {exc.code})") from exc
