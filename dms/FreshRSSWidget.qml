@@ -171,7 +171,9 @@ PluginComponent {
   }
   function openInBrowser(index) {
     var it = items[index]
-    if (!it || !it.url) return
+    // Web links only (the backend filters too): never hand file:// or
+    // app-handler URLs from a feed to the desktop.
+    if (!it || !/^https?:\/\//i.test(it.url)) return
     if (!it.read) setRead(index, true)
     Qt.openUrlExternally(it.url)
   }

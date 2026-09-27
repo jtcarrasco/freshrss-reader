@@ -174,9 +174,16 @@ def _get_json(base_url: str, token: str, path: str) -> dict:
 
 # ---------------------------------------------------------------- API
 
+def _is_web_url(url: str) -> bool:
+    return urlparse(url).scheme in ("http", "https")
+
+
 def check_is_freshrss(base_url: str) -> None:
     """GET /api/greader.php answers "OK" when the API is enabled. Catches a
-    wrong address before the API password is sent anywhere."""
+    wrong address before the API password is sent anywhere. Only http(s)
+    addresses are accepted: urllib would otherwise also open file:// and data:."""
+    if not _is_web_url(base_url):
+        raise FreshRSSError("the server address must start with http:// or https://")
     try:
         with urlopen(Request(api_url(base_url, "")), timeout=10) as response:
             raw = response.read()
@@ -215,7 +222,7 @@ def favicon_url(icon_url: str, base_url: str) -> str:
     parts = urlparse(urljoin(base_url + "/", icon_url))
     if parts.path.endswith("/f.php"):
         return base_url + "/f.php" + ("?" + parts.query if parts.query else "")
-    return parts.geturl()
+    return parts.geturl() if _is_web_url(parts.geturl()) else ""
 
 
 def overview(base_url: str, token: str) -> dict:
@@ -272,7 +279,9 @@ def items(base_url: str, token: str, stream_id: str, *, unread_only: bool = True
             "title": it.get("title") or "(untitled)",
             "published": int(it.get("published") or 0),
             "author": it.get("author") or "",
-            "url": link,
+            # Feed-supplied: only web links, so "open in browser" can't launch
+            # file:// or app-handler URLs from a hostile feed.
+            "url": link if _is_web_url(link) else "",
             "feedId": origin.get("streamId") or "",
             "feedTitle": origin.get("title") or "",
             "read": READ in cats,

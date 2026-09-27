@@ -26,3 +26,6 @@ First release.
 - IPC: `toggle`, `open`, `close`, `refresh`, `openUnread`, `openSettings`,
   `popOut`.
 - DankMaterialShell version in `dms/` with the same features and keys.
+- Security: feed and server text is always shown as plain text (no rich-text
+  image loads from titles); "open in browser" only opens http(s) links from
+  feeds; feed icon URLs and the server address must be http(s).

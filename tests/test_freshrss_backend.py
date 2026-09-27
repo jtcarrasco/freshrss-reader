@@ -152,3 +152,20 @@ def test_dms_copies_match_shared_files():
     root = Path(__file__).resolve().parents[1]
     for rel in ["Model.js", "scripts/freshrss_backend.py"]:
         assert (root / rel).read_bytes() == (root / "dms" / rel).read_bytes(), f"dms/{rel} is out of date"
+
+
+def test_item_links_and_favicons_are_web_only():
+    data = {"items": [
+        {"id": "a", "title": "ok", "canonical": [{"href": "https://x/1"}], "origin": {}, "categories": []},
+        {"id": "b", "title": "file", "canonical": [{"href": "file:///etc/passwd"}], "origin": {}, "categories": []},
+        {"id": "c", "title": "handler", "canonical": [{"href": "steam://run/1"}], "origin": {}, "categories": []},
+    ]}
+    with patch.object(fb, "_get_json", return_value=data):
+        urls = [it["url"] for it in fb.items("http://rss", "tok", fb.READING_LIST)["items"]]
+    assert urls == ["https://x/1", "", ""]
+    assert fb.favicon_url("file:///x.png", "https://rss") == ""
+
+
+def test_check_is_freshrss_rejects_non_http_addresses():
+    with pytest.raises(fb.FreshRSSError, match="http:// or https://"):
+        fb.check_is_freshrss("file:///etc")

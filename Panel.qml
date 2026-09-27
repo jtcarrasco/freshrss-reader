@@ -211,7 +211,9 @@ Panel {
   }
   function openInBrowser(index) {
     var it = root.items[index]
-    if (!it || !it.url) return
+    // Web links only (the backend filters too): never hand file:// or
+    // app-handler URLs from a feed to the desktop.
+    if (!it || !/^https?:\/\//i.test(it.url)) return
     if (!it.read) root.setRead(index, true)
     Qt.openUrlExternally(it.url)
   }
@@ -477,6 +479,7 @@ Panel {
           Layout.fillWidth: true
           spacing: Style.spacing.xxs
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             text: root.settingsView ? (root.configured ? "Settings" : "Connect to FreshRSS")
               : root.view === "home" ? "FreshRSS"
@@ -489,6 +492,7 @@ Panel {
             elide: Text.ElideRight
           }
           Text {
+            textFormat: Text.PlainText
             visible: root.view === "home" && !root.settingsView && root.configured
             text: root.totalUnread + " unread  ·  " + root.serverUrl
             color: root.mutedFg
@@ -505,6 +509,7 @@ Panel {
           foreground: root.fg
           onClicked: root.refreshCurrent()
           Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             visible: root.refreshing
             text: "󰑐"
@@ -524,6 +529,7 @@ Panel {
       }
 
       Text {
+        textFormat: Text.PlainText
         id: searchHint
         visible: false
         Layout.fillWidth: true
@@ -540,6 +546,7 @@ Panel {
         Layout.fillWidth: true
         spacing: Style.spacing.lg
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           wrapMode: Text.WordWrap
           text: "Use your FreshRSS API password (Settings → Profile → API password), not your web login password. API access must be enabled in Settings → Authentication. The login token is kept in the system keyring."
@@ -553,6 +560,7 @@ Panel {
         TextField { id: userField; Layout.fillWidth: true; placeholderText: "Username"; text: root.username; foreground: root.fg; font.family: root.fontFamily }
         TextField { id: passField; Layout.fillWidth: true; placeholderText: "API password"; password: true; foreground: root.fg; font.family: root.fontFamily }
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           visible: root.setupError !== ""
           text: root.setupError
@@ -594,6 +602,7 @@ Panel {
         PanelSeparator { Layout.fillWidth: true; foreground: root.fg }
         PanelSectionHeader { text: "KEYBOARD"; foreground: root.fg; fontFamily: root.fontFamily }
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           wrapMode: Text.WordWrap
           text: "Same shortcuts as the FreshRSS web interface (its defaults)."
@@ -626,6 +635,7 @@ Panel {
                 border.width: 1
                 border.color: Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.25)
                 Text {
+                  textFormat: Text.PlainText
                   id: keyText
                   anchors.centerIn: parent
                   text: modelData.key
@@ -636,6 +646,7 @@ Panel {
                 }
               }
               Text {
+                textFormat: Text.PlainText
                 id: actionText
                 anchors.left: keyChip.right
                 anchors.leftMargin: Style.spacing.md
@@ -653,6 +664,7 @@ Panel {
       }
 
       Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         visible: !root.settingsView && root.listError !== ""
         text: root.listError
@@ -712,6 +724,7 @@ Panel {
       }
 
       Text {
+        textFormat: Text.PlainText
         Layout.fillWidth: true
         visible: !root.settingsView && root.view === "items" && (root.itemsLoading || root.items.length === 0)
         text: root.itemsLoading ? "Loading..." : (root.unreadOnly ? "Nothing unread here." : "No items.")
@@ -771,6 +784,7 @@ Panel {
           sourceSize.width: Style.space(1200)
         }
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           text: root.article ? root.article.title : ""
           wrapMode: Text.WordWrap
@@ -780,6 +794,7 @@ Panel {
           font.bold: true
         }
         Text {
+          textFormat: Text.PlainText
           Layout.fillWidth: true
           text: root.article ? (root.article.feedTitle + (root.article.author ? "  ·  " + root.article.author : "") + "  ·  " + Model.formatDate(root.article.published)) : ""
           color: root.mutedFg
@@ -803,6 +818,7 @@ Panel {
           contentHeight: articleText.implicitHeight
           boundsBehavior: Flickable.StopAtBounds
           Text {
+            textFormat: Text.PlainText
             id: articleText
             width: articleView.width
             text: root.article ? (root.article.summary || "No summary. Press space to open the article.") : ""
@@ -851,6 +867,7 @@ Panel {
         : (mouse.containsMouse ? Style.hoverFillFor(root.fg, Color.accent) : "transparent")
     }
     Text {
+      textFormat: Text.PlainText
       id: glyphText
       visible: row.glyph !== ""
       anchors.left: parent.left
@@ -912,6 +929,7 @@ Panel {
       }
     }
     Text {
+      textFormat: Text.PlainText
       id: starMark
       visible: row.starred
       anchors.right: badgePill.visible ? badgePill.left : parent.right
@@ -935,6 +953,7 @@ Panel {
       border.width: 1
       border.color: Color.accent
       Text {
+        textFormat: Text.PlainText
         id: badgeText
         anchors.centerIn: parent
         text: row.badge
@@ -954,6 +973,7 @@ Panel {
       anchors.verticalCenter: parent.verticalCenter
       spacing: Style.spacing.xxs
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         text: row.primary
         color: root.fg
@@ -963,6 +983,7 @@ Panel {
         elide: Text.ElideRight
       }
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         visible: row.secondary !== ""
         text: row.secondary

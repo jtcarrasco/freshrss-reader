@@ -88,6 +88,7 @@ BarWidget {
       anchors.centerIn: parent
       spacing: Style.space(4)
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         text: "󰑫"
         color: root.bar ? root.bar.barForeground : Color.foreground
@@ -95,6 +96,7 @@ BarWidget {
         font.pixelSize: Style.bar.iconFont
       }
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         visible: root.unread > 0
         text: root.unread > 999 ? "999+" : String(root.unread)
