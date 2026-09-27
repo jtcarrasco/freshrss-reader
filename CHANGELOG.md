@@ -30,4 +30,5 @@ First release.
   image loads from titles); "open in browser" only opens http(s) links from
   feeds; feed icon URLs and the server address must be http(s).
 - Server responses are read with a size cap (32 MB) and an overall 60-second
-  deadline, so a misbehaving server can't exhaust memory.
+  deadline that is checked as data trickles in, plus a hard 90-second limit per
+  backend call, so a misbehaving server can't exhaust memory or hang the plugin.

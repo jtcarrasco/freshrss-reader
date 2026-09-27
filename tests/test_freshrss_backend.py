@@ -207,3 +207,56 @@ def test_request_refuses_an_endless_api_response():
     with patch.object(fb, "urlopen", return_value=resp), patch.object(fb, "MAX_API_BYTES", 256 * 1024):
         with pytest.raises(fb.FreshRSSError, match="too large"):
             fb._request("http://rss/api/greader.php/reader/api/0/token", token="t")
+
+
+def _trickling_server():
+    """A real HTTP server that sends one byte every 0.1 s for 10 s."""
+    import http.server
+    import threading
+    import time as _time
+
+    class Drip(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            try:
+                for _ in range(100):
+                    self.wfile.write(b"x")
+                    self.wfile.flush()
+                    _time.sleep(0.1)
+            except OSError:
+                pass
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Drip)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def test_deadline_holds_against_a_trickling_server():
+    import time as _time
+    from urllib.request import urlopen as real_urlopen
+    server = _trickling_server()
+    try:
+        started = _time.monotonic()
+        with real_urlopen(f"http://127.0.0.1:{server.server_address[1]}/", timeout=5) as response:
+            with pytest.raises(fb.FreshRSSError, match="too long"):
+                fb.read_limited(response, 10**6, deadline_s=0.5)
+        assert _time.monotonic() - started < 2
+    finally:
+        server.shutdown()
+
+
+def test_watchdog_interrupts_a_blocked_backend():
+    import signal
+    import time as _time
+    started = _time.monotonic()
+    try:
+        with pytest.raises(fb.BackendTimeout):
+            fb.install_watchdog(1)
+            _time.sleep(5)
+    finally:
+        signal.alarm(0)
+    assert _time.monotonic() - started < 3

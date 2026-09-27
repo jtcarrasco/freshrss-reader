@@ -16,6 +16,7 @@ from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urljoin, urlparse
 from urllib.request import Request, urlopen
+from http.client import HTTPResponse
 
 CONFIG_DIR = os.path.expanduser("~/.config/freshrss-plugin")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
@@ -150,32 +151,54 @@ def html_to_text(fragment: str) -> str:
 MAX_API_BYTES = 32 * 1024 * 1024
 MAX_PROBE_BYTES = 64 * 1024
 READ_DEADLINE_S = 60
+PROCESS_DEADLINE_S = 90    # whole backend call, all requests included
 _CHUNK = 64 * 1024
 
 
 def read_limited(response, limit: int, deadline_s: float = READ_DEADLINE_S) -> bytes:
-    """Read an HTTP response body in chunks, refusing anything over `limit`
-    bytes (by Content-Length up front, and by what actually arrives) or
-    taking longer than `deadline_s` overall."""
+    """Read an HTTP response body, refusing anything over `limit` bytes (by
+    Content-Length up front, and by what actually arrives) or taking longer
+    than `deadline_s` overall."""
     declared = (getattr(response, "headers", None) or {}).get("Content-Length")
     if declared and str(declared).isdigit() and int(declared) > limit:
         raise FreshRSSError("the server's response was too large")
     deadline = time.monotonic() + deadline_s
+    # read1() returns as soon as any data has arrived (one socket read), so the
+    # deadline is checked even while a server trickles bytes; read(n) would
+    # block until all n bytes came in.
+    streaming = isinstance(response, HTTPResponse)
+    read = response.read1 if streaming else response.read
     chunks, size = [], 0
     while True:
-        chunk = response.read(_CHUNK)
+        if time.monotonic() > deadline:
+            raise FreshRSSError("the server took too long to respond")
+        chunk = read(_CHUNK)
         if not chunk:
             break
         size += len(chunk)
         if size > limit:
             raise FreshRSSError("the server's response was too large")
-        if time.monotonic() > deadline:
-            raise FreshRSSError("the server took too long to respond")
         chunks.append(chunk)
-        # HTTPResponse.read(n) only returns short at the end of the body.
-        if len(chunk) < _CHUNK:
+        if not streaming and len(chunk) < _CHUNK:
             break
     return b"".join(chunks)
+
+
+class BackendTimeout(BaseException):
+    """Raised by the process watchdog. A BaseException so no `except Exception`
+    or `except OSError` inside the backend can swallow it."""
+
+
+def install_watchdog(seconds: int) -> None:
+    """Hard wall-clock limit for this backend process, whatever it's blocked
+    on (a socket read, DNS, a slow server): SIGALRM interrupts it."""
+    import signal
+
+    def expired(signum, frame):
+        raise BackendTimeout("the server took too long to respond")
+
+    signal.signal(signal.SIGALRM, expired)
+    signal.alarm(seconds)
 
 
 def _request(url: str, *, token: str = None, data: dict = None, timeout: int = 15) -> bytes:
@@ -449,9 +472,10 @@ def _main(argv: list) -> dict:
 
 
 if __name__ == "__main__":
+    install_watchdog(PROCESS_DEADLINE_S)
     try:
         print(json.dumps(_main(sys.argv)))
-    except FreshRSSError as exc:
+    except (FreshRSSError, BackendTimeout) as exc:
         print(json.dumps({"error": str(exc)}))
         sys.exit(1)
     except Exception as exc:  # the UI can only read JSON, so report crashes as JSON too
