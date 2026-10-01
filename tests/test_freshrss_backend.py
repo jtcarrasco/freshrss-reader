@@ -17,7 +17,7 @@ def fake_response(body):
 
 
 def test_normalize_base_url():
-    assert fb.normalize_base_url(" rss.example.com/ ") == "http://rss.example.com"
+    assert fb.normalize_base_url(" rss.example.com/ ") == "https://rss.example.com"
     assert fb.normalize_base_url("https://rss.example.com/api/greader.php") == "https://rss.example.com"
     assert fb.normalize_base_url("https://rss.example.com/i/") == "https://rss.example.com"
 

@@ -40,11 +40,11 @@ class FreshRSSError(Exception):
 # ---------------------------------------------------------------- helpers
 
 def normalize_base_url(base_url: str) -> str:
-    """Accept what people paste: add http:// when missing, drop a trailing
+    """Accept what people paste: add https:// when missing, drop a trailing
     slash and a pasted /api/greader.php or /i/ web path."""
     url = base_url.strip()
     if url and "://" not in url:
-        url = "http://" + url
+        url = "https://" + url
     url = url.rstrip("/")
     for suffix in ("/api/greader.php", "/i"):
         if url.endswith(suffix):

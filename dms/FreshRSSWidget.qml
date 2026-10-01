@@ -732,7 +732,7 @@ PluginComponent {
               visible: root.stream !== null && root.stream.id !== root.starredStream
               text: root.confirmMarkAll ? "Confirm" : "Mark all read"
               iconName: "done_all"
-              buttonHeight: 32
+              buttonHeight: Theme.buttonHeightXS
               backgroundColor: root.confirmMarkAll ? Theme.error : Theme.surfaceContainerHigh
               textColor: root.confirmMarkAll ? Theme.primaryText : Theme.surfaceText
               onClicked: {
@@ -813,11 +813,11 @@ PluginComponent {
             }
             RowLayout {
               spacing: Theme.spacingS
-              DankButton { text: "Open in browser (Space)"; iconName: "open_in_new"; buttonHeight: 32; onClicked: root.openInBrowser(root.cursor) }
+              DankButton { text: "Open in browser (Space)"; iconName: "open_in_new"; buttonHeight: Theme.buttonHeightXS; onClicked: root.openInBrowser(root.cursor) }
               DankButton {
                 text: root.article && root.article.starred ? "Unstar (f)" : "Star (f)"
                 iconName: "star"
-                buttonHeight: 32
+                buttonHeight: Theme.buttonHeightXS
                 backgroundColor: Theme.surfaceContainerHigh
                 textColor: Theme.surfaceText
                 onClicked: root.toggleStar(root.cursor)
@@ -825,7 +825,7 @@ PluginComponent {
               DankButton {
                 text: root.article && root.article.read ? "Mark unread (r)" : "Mark read (r)"
                 iconName: "mark_email_read"
-                buttonHeight: 32
+                buttonHeight: Theme.buttonHeightXS
                 backgroundColor: Theme.surfaceContainerHigh
                 textColor: Theme.surfaceText
                 onClicked: root.toggleRead(root.cursor)
@@ -875,8 +875,8 @@ PluginComponent {
     signal activated()
     signal contextActivated()
 
-    readonly property int thumbSize: 52
-    implicitHeight: Math.max(44, textCol.implicitHeight + Theme.spacingS * 2,
+    readonly property int thumbSize: Theme.listItemHeight - Theme.spacingXS
+    implicitHeight: Math.max(Theme.buttonHeightS + Theme.spacingXS, textCol.implicitHeight + Theme.spacingS * 2,
                              row.thumbSlot ? row.thumbSize + Theme.spacingXS * 2 : 0)
 
     StyledRect {
