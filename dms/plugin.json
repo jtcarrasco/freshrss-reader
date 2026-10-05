@@ -5,11 +5,15 @@
   "version": "0.1.0",
   "author": "Jason Carrasco",
   "icon": "rss_feed",
-  "type": "widget",
+  "type": "composite",
   "capabilities": [
+    "daemon",
     "dankbar-widget"
   ],
-  "component": "./FreshRSSWidget.qml",
+  "components": {
+    "daemon": "./FreshRSSDaemon.qml",
+    "widget": "./FreshRSSWidget.qml"
+  },
   "requires_dms": ">=1.6.0",
   "dependencies": [
     "python3",

@@ -25,7 +25,9 @@ First release.
   `base_url` is missing the port still show icons.
 - IPC: `toggle`, `open`, `close`, `refresh`, `openUnread`, `openSettings`,
   `popOut`.
-- DankMaterialShell version in `dms/` with the same features and keys.
+- DankMaterialShell version in `dms/` with the same features and keys. It is a
+  daemon plus a bar widget, so the unread poll and IPC handler run once however
+  many bars show the widget, and IPC opens the popout on the focused screen.
 - Security: feed and server text is always shown as plain text (no rich-text
   image loads from titles); "open in browser" only opens http(s) links from
   feeds; feed icon URLs and the server address must be http(s).

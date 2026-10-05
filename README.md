@@ -199,8 +199,9 @@ rm -rf ~/.config/freshrss-plugin ~/.local/state/freshrss-plugin
   `qs.Commons` theme.
 - `scripts/freshrss_backend.py`: every FreshRSS call, through the Google
   Reader-compatible API (`/api/greader.php`), standard library only.
-- `dms/`: the DankMaterialShell version. `tools/sync-dms.sh` copies the shared
-  `Model.js` and backend into it.
+- `dms/`: the DankMaterialShell version. `FreshRSSDaemon.qml` holds the state,
+  poll and IPC once per session; `FreshRSSWidget.qml` is the per-bar view.
+  `tools/sync-dms.sh` copies the shared `Model.js` and backend into it.
 
 ## Development
 
