@@ -256,6 +256,20 @@ PluginComponent {
     onTriggered: root.refresh()
   }
   Timer { id: confirmTimer; interval: 4000; onTriggered: { root.confirmDisconnect = false; root.confirmMarkAll = false } }
+  // A process that never started (python3 missing) emits no `exited`, and
+  // Quickshell has no QML error handler for that case.
+  Timer {
+    id: loginWatchdog
+    interval: 5000
+    repeat: true
+    onTriggered: {
+      if (!root.setupBusy) { stop(); return }
+      if (loginProc.running) return
+      stop()
+      root.setupBusy = false
+      if (root.setupError === "") root.setupError = "The backend didn't start (is python3 installed?)"
+    }
+  }
 
   // ---- Called from the popout ----------------------------------------------
   function login(url, user, password) {
@@ -265,7 +279,12 @@ PluginComponent {
     loginUrl = url
     loginUser = user
     pendingPassword = password
+    // Set explicitly: the declarative command binding is not guaranteed to be
+    // re-evaluated before the process starts in the same tick, which would
+    // launch the backend with empty arguments and silently do nothing.
+    loginProc.command = backend(["login", url, user])
     loginProc.running = true
+    loginWatchdog.restart()
   }
 
   // Disconnect and Mark all read take two clicks: the first arms the button,
@@ -318,10 +337,13 @@ PluginComponent {
           root.configured = r.configured === true
           root.serverUrl = r.baseUrl || ""
           root.username = r.username || ""
-        } catch (e) {}
+        } catch (e) { console.warn("[freshrss] check-configured: unreadable output:", text) }
         if (!root.configured) root.settingsView = true
         else root.refresh()
       }
+    }
+    stderr: StdioCollector {
+      onStreamFinished: if (text.trim() !== "") console.warn("[freshrss] check-configured stderr:", text.trim())
     }
   }
   Process {
@@ -383,10 +405,28 @@ PluginComponent {
     // re-enables it once closed); the backend reads one line per attempt.
     stdinEnabled: true
     command: root.backend(["login", root.loginUrl, root.loginUser])
-    onStarted: { write(root.pendingPassword + "\n"); root.pendingPassword = "" }
+    onStarted: {
+      write(root.pendingPassword + "\n")
+      root.pendingPassword = ""
+    }
+    onExited: (exitCode, exitStatus) => {
+      // Never leave the form stuck on "Connecting...": if the process died
+      // without a parsable result, report it instead of waiting forever.
+      if (root.setupBusy) {
+        root.setupBusy = false
+        if (root.setupError === "")
+          root.setupError = exitCode === 0
+            ? "The backend ended without a result"
+            : "The backend exited with code " + exitCode + " (is python3 installed?)"
+      }
+    }
+    stderr: StdioCollector {
+      onStreamFinished: if (text.trim() !== "") console.warn("[freshrss] login stderr:", text.trim())
+    }
     stdout: StdioCollector {
       onStreamFinished: {
         root.setupBusy = false
+        loginWatchdog.stop()
         try {
           var r = JSON.parse(text)
           if (r.ok) {
