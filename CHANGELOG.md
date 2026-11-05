@@ -4,6 +4,9 @@
 
 First release.
 
+- Fix: `j` stopped at the end of the first page (40 stories) in the article
+  view; the next page now loads as the cursor nears the end.
+
 - Bar icon with the unread count, refreshed in the background every 5 minutes;
   dims when not connected. Middle-click refreshes.
 - Dropdown built on the shell's own `qs.Ui` kit and `qs.Commons` theme: All

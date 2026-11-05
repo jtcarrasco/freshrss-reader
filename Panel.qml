@@ -240,6 +240,13 @@ Panel {
     root.cursor = Math.max(0, Math.min(root.items.length - 1, root.cursor + delta))
     if (root.view === "article") root.openArticle(root.cursor)
     else itemList.positionViewAtIndex(root.cursor, ListView.Contain)
+    if (delta > 0) root.prefetchNear()
+  }
+  // The list's scroll-to-end trigger never fires in the article view (the list
+  // is hidden) or when every row fits, so j would stop at the end of a page.
+  // Fetch the next page once the cursor is within a few rows of the end.
+  function prefetchNear() {
+    if (root.continuation && !root.itemsLoading && root.cursor >= root.items.length - 5) root.loadItems(true)
   }
   function jumpTo(first) {
     if (root.settingsView) return
@@ -251,8 +258,9 @@ Panel {
   }
   function nextUnread() {
     for (var i = root.cursor + 1; i < root.items.length; i++) {
-      if (!root.items[i].read) { root.cursor = i; if (root.view === "article") root.openArticle(i); else itemList.positionViewAtIndex(i, ListView.Contain); return }
+      if (!root.items[i].read) { root.cursor = i; if (root.view === "article") root.openArticle(i); else itemList.positionViewAtIndex(i, ListView.Contain); root.prefetchNear(); return }
     }
+    root.prefetchNear()
   }
   function stepCategory(delta) {
     if (root.categories.length === 0) return

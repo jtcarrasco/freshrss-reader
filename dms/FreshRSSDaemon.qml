@@ -192,7 +192,14 @@ PluginComponent {
     if (items.length === 0) return false
     cursor = Math.max(0, Math.min(items.length - 1, cursor + delta))
     if (view === "article") openArticle(cursor)
+    if (delta > 0) prefetchNear()
     return true
+  }
+  // The list's scroll-to-end trigger never fires in the article view (the list
+  // is hidden) or when every row fits, so j would stop at the end of a page.
+  // Fetch the next page once the cursor is within a few rows of the end.
+  function prefetchNear() {
+    if (continuation && !itemsLoading && cursor >= items.length - 5) loadItems(true)
   }
   function jumpTo(first) {
     if (settingsView) return false
@@ -207,9 +214,11 @@ PluginComponent {
       if (!items[i].read) {
         cursor = i
         if (view === "article") openArticle(i)
+        prefetchNear()
         return true
       }
     }
+    prefetchNear()
     return false
   }
   function stepCategory(delta) {
