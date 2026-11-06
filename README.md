@@ -9,6 +9,8 @@ It's keyboard-driven, and the keys are the ones FreshRSS itself uses.
 
 *An independent client. Not affiliated with or endorsed by the FreshRSS project.*
 
+<a href="https://buymeacoffee.com/jtcarrasco"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="41"></a>
+
 ![FreshRSS for Omarchy](preview.png)
 
 | Categories | Keyboard reference |
@@ -211,6 +213,12 @@ uv run --with pytest python -m pytest tests
 
 The tests cover the backend with no network access, and fail if the copies in
 `dms/` drift from the shared files (run `tools/sync-dms.sh` after changing them).
+
+## Support
+
+FreshRSS for Omarchy is free and stays free. If it saves you some time, you can [buy me a coffee](https://buymeacoffee.com/jtcarrasco).
+
+<a href="https://buymeacoffee.com/jtcarrasco"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="41"></a>
 
 ## License
 
